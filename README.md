@@ -1,5 +1,5 @@
 # Optimisation_Levenshtein
-Python script improvments to reduce time and computations when distance is bounded.
+Python script improvments to reduce time and computations when distance is bounded (i.e when using Levenshtein distance as a treshold for similarity).
 
 ## the Levenshtein Distance
 
@@ -49,13 +49,56 @@ For the following rows here is the method:
 
 First column: same logic as in the previous step. Comparing " " to " " then " d" to " " and so on.
 
+X|" "|i|n|s|e|r|t|i|o|n
+--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
+" "|0|1|2|3|4|5|6|7|8|9
+d |1|a|b|c||||||
+e |2||||d|||||
+l |3|||||||||
+e |4|||||||||
+t |5|||||||||
+i |6|||||||||
+o |7|||||||||
+n |8|||||||||
+
 For the other columns there is two cases: 
 
-..* letters for the row 'i' and the column 'j' are the same:
-There is no change needed in that case, the distance between the current state [i,j]  (for example " insert" vs " delet") is the same as it was 1 letter before for both words ("inser" vs "dele"). Then it's the same distance as it was in [i-1, j-1].
+* letters for the row 'i' and for the column 'j' are the same:
 
-..* letters for the row 'i' and the column 'j' are different:
+There is no change needed in that case, the distance between the current state [i,j]  (for example " insert" vs " delet") is the same as it was 1 letter before for both words (" inser" vs " dele"). Then it's the same distance as it was in [i-1, j-1].
 
+* letters for the row 'i' and for the column 'j' are different: 
+
+In this case an insertion, deletion or substitution is needed. Then it's 1 more transformation to add to the "shortest path" to reach the previous step which can be in position [i-1,j] (deletion), [i,j-1] (insertion) or [i-1,j-1] (substitution).
+
+__The mathematical fomula is: min(value([i-1,j]) +1, value([i,j-1]) +1, value([i-1,j-1]) +1)__
+
+From the previous matrix, here are some examples:
+
+* a: "d" and "i" are different then it's the minimum between 0+1, 1+1 and 1+1 so it's 1.
+* b: "d" and "n" are different then it's the minimum between 1+1, a+1 and 2+1 so it's 2.
+* c: "d" and "s" are different then it's the minimum between 2+1, b+1 and 3+1 so it's 3.
+* d: at the d position "e" and "e" are equal then it's the value from c without transformation. So it's 3 too.
+
+At the end, the full matrix looks like this: 
+
+X|" "|i|n|s|e|r|t|i|o|n
+--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
+" "|`0`|1|2|3|4|5|6|7|8|9
+d |1|`1`|2|3|4|5|6|7|8|9
+e |2|2|`2`|3|3|4|5|6|7|8
+l |3|3|3|`3`|4|5|6|7|8|9
+e |4|4|4|4|`3`|`4`|5|6|7|8
+t |5|5|5|5|4|4|`4`|5|6|7
+i |6|5|6|6|5|5|5|`4`|5|6
+o |7|6|6|7|6|6|6|5|`4`|5
+n |8|7|7|7|7|7|7|6|5|`4`
+
+The path from " " vs " " to " deletion" vs " insertion" is highlighted.
+
+__The Levenshtein distance between the two word is the last value of the matrix__. In the current case it's 4. 
+
+Which means it requires 4 operations to change one word into the other: change "d" to "i", change "e" to "n", change "l" to "s" and add an "r".
 
 ## Improved Principle
 
@@ -66,6 +109,22 @@ Since the difference is bigger than the treshold the Levenshtein distance will b
 ### Current maximum value
 Using previous explanations like the distance can not decrease and cell computation is based on [i, j-1], [i-1, j-1] and [i-1, j] it's possible to cut the process before the end.
 At the end of each row, if the maximum value of the latter is above the treshold then the process can be stopped since it cannot decrease.
+
+In the previous example if the Levenshtein distance have to be bouded to 2 edits the algorithm will stop at this step, since the threshold is lower than the minimum value of the row: 
+
+X|" "|i|n|s|e|r|t|i|o|n
+--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
+" "|`0`|1|2|3|4|5|6|7|8|9
+d |1|`1`|2|3|4|5|6|7|8|9
+e |2|2|`2`|3|3|4|5|6|7|8
+l |`3`|`3`|`3`|`3`|4|5|6|7|8|9
+e ||||||||||
+t ||||||||||
+i ||||||||||
+o ||||||||||
+n ||||||||||
+
+It allows to prevent 50 unecessary computations in this case.
 
 ### Matrix axis
 Based on the algorithm mechanism (i.e. filling row by row) the shorter word have to be placed on the j's axis and the longer on on the i's axis. 
